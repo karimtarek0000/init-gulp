@@ -1,0 +1,1 @@
+"use strict";var test="this is a text...";console.log(test);
