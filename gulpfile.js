@@ -1,5 +1,5 @@
 // FROM GULP
-const { src, dest, watch, series, parallel } = require("gulp");
+const { src, dest, watch, series } = require("gulp");
 // ALL PACKAGES
 const sass = require("gulp-sass");
 const plumber = require("gulp-plumber");
@@ -70,39 +70,34 @@ const DEST_FOLDER_PRO = {
 //// TASKS
 /// STYLE
 // TASK - DEVELOPMENT
-const styleDev = (run) => {
-  //
-  if (run === "sass") {
-    return (
-      src(SRC_FOLDER.styleSass)
-        .pipe(
-          plumber(function (error) {
-            console.log("Style Task Error");
-            console.log(error);
-            this.emit("end");
-          })
-        )
-        .pipe(sourceMaps.init())
-        // .pipe(concat("style.css"))
-        .pipe(sass())
-        .pipe(sourceMaps.write())
-        .pipe(dest(DEST_FOLDER.style))
-    );
-  }
-  //
-  if (run === "tailwind") {
-    return src("./src/css/tailwind/style.css")
-      .pipe(
-        plumber(function (error) {
-          console.log("Style Task Error");
-          console.log(error);
-          this.emit("end");
-        })
-      )
-      .pipe(postcss())
-      .pipe(dest(DEST_FOLDER.style));
-  }
+const styleSassDev = () => {
+  return src(SRC_FOLDER.styleSass)
+    .pipe(
+      plumber(function (error) {
+        console.log("Style Task Error");
+        console.log(error);
+        this.emit("end");
+      })
+    )
+    .pipe(sourceMaps.init())
+    .pipe(sass())
+    .pipe(sourceMaps.write())
+    .pipe(dest(DEST_FOLDER.style));
 };
+
+const styleTailwindDev = () => {
+  return src(SRC_FOLDER.styleTailwind)
+    .pipe(
+      plumber(function (error) {
+        console.log("Style Task Error");
+        console.log(error);
+        this.emit("end");
+      })
+    )
+    .pipe(postcss())
+    .pipe(dest(DEST_FOLDER.style));
+};
+
 // TASK - PRODUCTION
 const styleProd = () => {
   //
@@ -197,8 +192,8 @@ const imageMin = () => {
 // TASK - CONVERT TO WEBP
 const imageWebp = () => {
   return src(SRC_FOLDER.img)
-    .pipe(gulpClean())
     .pipe(webp())
+    .pipe(gulpClean())
     .pipe(dest(DEST_FOLDER.img));
 };
 
@@ -219,36 +214,28 @@ const watcher = async () => {
     port: 5000,
   });
   console.log("Watch Running...");
-  // 1) - WATCH STYLE
-  watch(
-    [
-      SRC_FOLDER.styleSassWatch,
-      SRC_FOLDER.styleTailwind,
-      "./tailwind.config.js",
-    ],
-    parallel(styleDev.bind(this, "sass"), reload)
-  );
-  // 2) - WATCH JAVASCRIPT
-  watch(SRC_FOLDER.js, parallel(jsDev, reload));
-  // 3) - WATCH PUG
+  // 1) - WATCH STYLE SASS
+  watch(SRC_FOLDER.styleSassWatch, series(styleSassDev, reload));
+  // 2) - WATCH STYLE TAILWIND
+  // watch(
+  //   [SRC_FOLDER.styleTailwind, "./tailwind.config.js"],
+  //   parallel(styleTailwindDev, reload)
+  // );
+  // 3) - WATCH JAVASCRIPT
+  watch(SRC_FOLDER.js, series(jsDev, reload));
+  // 4) - WATCH PUG
   // watch(SRC_FOLDER.pug2, parallel(pug, reload));
-  // 4) - WATCH HTML
-  watch(SRC_FOLDER.html, parallel(html, reload));
-  // 5) - WATCH IMAGES
+  // 5) - WATCH HTML
+  watch(SRC_FOLDER.html, series(html, reload));
+  // 6) - WATCH IMAGES
   watch(`${SRC_FOLDER.img}{png,jpeg,jpg}`, { events: "add" }, imageWebp);
-  // 6) - WATCH USE JAVASCRIPT MODULE
+  // 7) - WATCH USE JAVASCRIPT MODULE
   // watch(SRC_FOLDER.js, parallel(jsDevModule, reload));
 };
 ///////////////////////////////////
 // EXPORTS
 // DEFAULT
-exports.default = series(
-  html,
-  imageWebp,
-  styleDev.bind(this, "sass"),
-  jsDev,
-  watcher
-);
+exports.default = series(html, imageWebp, styleSassDev, jsDev, watcher);
 
 // BUILD
 exports.build = series(styleProd, jsProd);
